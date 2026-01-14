@@ -22,41 +22,65 @@ nom = st.text_input("Nom du patient (ex: Williams)")
 annee = st.text_input("Année de naissance (ex: 1955-06-04)")
 pid = st.text_input("ID du patient (ex: P001)")
 
-if st.button("Rechercher"):
-    st.session_state['patient_query'] = f"""
+if st.button("Valider"):
+    st.session_state['patient_filters'] = {
+        "prenom": prenom,
+        "nom": nom,
+        "date_naissance": annee,
+        "pid": pid
+    }
+    st.session_state['patient_found'] = False   # on reset pour éviter l’affichage auto
+
+# ============= Recherche du patient =============
+if 'patient_filters' in st.session_state and not st.session_state.get('patient_found', False):
+
+    f = st.session_state['patient_filters']
+
+    query = f"""
         SELECT patient_id, first_name, last_name, date_of_birth
         FROM patients
         WHERE (
-            first_name = '{prenom}'
-            AND last_name = '{nom}'
-            AND date_of_birth = '{annee}'
+            first_name = '{f['prenom']}'
+            AND last_name = '{f['nom']}'
+            AND date_of_birth = '{f['date_naissance']}'
         )
-        OR patient_id = '{pid}'
+        OR patient_id = '{f['pid']}'
     """
 
-# Si une recherche a été stockée
-if 'patient_query' in st.session_state:
-    patient = pd.read_sql(st.session_state['patient_query'], conn)
+    patient = pd.read_sql(query, conn)
 
     if patient.empty:
         st.warning("Aucun patient trouvé.")
+        st.session_state['patient_found'] = False
     else:
-        patient_id = patient.iloc[0]['patient_id']
-        st.success(f"Patient : {patient.iloc[0]['first_name']} {patient.iloc[0]['last_name']} ({patient_id})")
+        st.session_state['patient_found'] = True
+        st.session_state['patient_id'] = patient.iloc[0]['patient_id']
+        st.success(f"Patient trouvé : {patient.iloc[0]['first_name']} {patient.iloc[0]['last_name']}")
+        st.info("Sélectionner un profil à afficher dans le menu ci-dessous.")
 
-        profil_choice = st.selectbox(
-            "Quel profil afficher ?",
-            ["Profil Social", "Profil Médical", "Profil Financier"]
-        )
+# ============= Choix du profil =============
+if st.session_state.get('patient_found', False):
+
+    profil_choice = st.selectbox(
+        "Quel profil voulez-vous afficher ?",
+        ["", "Profil Social", "Profil Médical", "Profil Financier"]
+    )
+
+    # ============= Affichage du profil =============
+    if profil_choice and profil_choice != "":
+        pid = st.session_state['patient_id']
 
         if profil_choice == "Profil Social":
-            data = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{patient_id}'", conn)
+            data = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{pid}'", conn)
+            st.subheader("Profil Social")
             st.dataframe(data)
 
-        if profil_choice == "Profil Médical":
-            data = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{patient_id}'", conn)
+        elif profil_choice == "Profil Médical":
+            data = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{pid}'", conn)
+            st.subheader("Profil Médical")
             st.dataframe(data)
 
-        if profil_choice == "Profil Financier":
-            data = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{patient_id}'", conn)
+        elif profil_choice == "Profil Financier":
+            data = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{pid}'", conn)
+            st.subheader("Profil Financier")
             st.dataframe(data)
