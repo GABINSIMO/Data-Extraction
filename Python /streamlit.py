@@ -22,35 +22,41 @@ nom = st.text_input("Nom du patient (ex: Williams)")
 annee = st.text_input("Année de naissance (ex: 1955-06-04)")
 pid = st.text_input("ID du patient (ex: P001)")
 
-
 if st.button("Rechercher"):
-    query = f"""
+    st.session_state['patient_query'] = f"""
         SELECT patient_id, first_name, last_name, date_of_birth
         FROM patients
-        WHERE (last_name = '{nom}' 
-        AND first_name = '{prenom}' 
-        AND date_of_birth = '{annee}'
-        ) OR patient_id = '{pid}'
+        WHERE (
+            first_name = '{prenom}'
+            AND last_name = '{nom}'
+            AND date_of_birth = '{annee}'
+        )
+        OR patient_id = '{pid}'
     """
-    patient = pd.read_sql(query, conn)
+
+# Si une recherche a été stockée
+if 'patient_query' in st.session_state:
+    patient = pd.read_sql(st.session_state['patient_query'], conn)
 
     if patient.empty:
         st.warning("Aucun patient trouvé.")
     else:
         patient_id = patient.iloc[0]['patient_id']
-        st.success(f"Patient trouvé : {patient.iloc[0]['first_name']} {patient.iloc[0]['last_name']} ({patient_id})")
+        st.success(f"Patient : {patient.iloc[0]['first_name']} {patient.iloc[0]['last_name']} ({patient_id})")
 
-        # PROFIL SOCIAL
-        social = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{patient_id}'", conn)
-        st.subheader("Profil Social")
-        st.dataframe(social)
+        profil_choice = st.selectbox(
+            "Quel profil afficher ?",
+            ["Profil Social", "Profil Médical", "Profil Financier"]
+        )
 
-        # PROFIL MÉDICAL
-        medical = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{patient_id}'", conn)
-        st.subheader("Profil Médical")
-        st.dataframe(medical)
+        if profil_choice == "Profil Social":
+            data = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{patient_id}'", conn)
+            st.dataframe(data)
 
-        # PROFIL FINANCIER
-        financial = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{patient_id}'", conn)
-        st.subheader("Profil Financier")
-        st.dataframe(financial)
+        if profil_choice == "Profil Médical":
+            data = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{patient_id}'", conn)
+            st.dataframe(data)
+
+        if profil_choice == "Profil Financier":
+            data = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{patient_id}'", conn)
+            st.dataframe(data)
