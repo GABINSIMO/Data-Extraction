@@ -66,21 +66,39 @@ if st.session_state.get('patient_found', False):
         ["", "Profil Social", "Profil Médical", "Profil Financier"]
     )
 
-    # ============= Affichage du profil =============
-    if profil_choice and profil_choice != "":
-        pid = st.session_state['patient_id']
+    commande = st.text_input("Ou tapez une commande (ex: 'je veux le profil financier')")
+    profil_cmd = None
 
-        if profil_choice == "Profil Social":
-            data = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{pid}'", conn)
+    if st.button("Interpréter la commande"):
+        cmd = commande.lower()
+
+        if "financ" in cmd:
+            profil_cmd = "Profil Financier"
+        elif "médic" in cmd or "medical" in cmd:
+            profil_cmd = "Profil Médical"
+        elif "social" in cmd:
+            profil_cmd = "Profil Social"
+        else:
+            st.warning("Commande non reconnue. Essayez 'social', 'médical' ou 'financier'.")    
+
+
+    # ============= Affichage du profil =============
+    profil_to_show = profil_cmd if profil_cmd else profil_choice
+
+    if profil_to_show and profil_to_show != "":
+        pid_val = st.session_state['patient_id']
+
+        if profil_to_show == "Profil Social":
+            data = pd.read_sql(f"SELECT * FROM profil_social WHERE patient_id = '{pid_val}'", conn)
             st.subheader("Profil Social")
             st.dataframe(data)
 
-        elif profil_choice == "Profil Médical":
-            data = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{pid}'", conn)
+        elif profil_to_show == "Profil Médical":
+            data = pd.read_sql(f"SELECT * FROM profil_medical WHERE patient_id = '{pid_val}'", conn)
             st.subheader("Profil Médical")
             st.dataframe(data)
 
-        elif profil_choice == "Profil Financier":
-            data = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{pid}'", conn)
+        elif profil_to_show == "Profil Financier":
+            data = pd.read_sql(f"SELECT * FROM profil_financier WHERE patient_id = '{pid_val}'", conn)
             st.subheader("Profil Financier")
             st.dataframe(data)
